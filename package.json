@@ -1,0 +1,41 @@
+{
+  "name": "hcpack",
+  "displayName": "hcpack",
+  "publisher": "hcpack",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:hcpack.pack"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "hcpack.pack",
+        "title": "📦 HCpack Module"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "hcpack.pack",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation@40"
+        },
+        {
+          "command": "hcpack.pack",
+          "when": "explorerResourceIsFile",
+          "group": "navigation@40"
+        }
+      ]
+    }
+  },
+  "dependencies": {
+    "ignore": "^5.3.1"
+  }
+}
