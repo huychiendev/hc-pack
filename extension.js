@@ -18,7 +18,7 @@ function activate(context) {
         const projectRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
         const folderName = path.basename(targetDir);
         const outputFile = path.join(projectRoot, `${folderName}.xml`);
-        const extensions = ['.ts', '.tsx', '.js', '.jsx', '.cs', '.vb', '.mjs', '.md'];
+        const extensions = ['.ts', '.tsx', '.js', '.jsx', '.cs', '.vb', '.mjs', '.md', '.rs', '.toml', '.sql', '.yml', '.yaml', '.json', '.css', '.html'];
 
         const ig = ignore().add(fs.existsSync(path.join(projectRoot, '.gitignore')) ? fs.readFileSync(path.join(projectRoot, '.gitignore'), 'utf8') : '');
 
@@ -29,22 +29,22 @@ function activate(context) {
           if (!p) return '';
           let rel = path.relative(projectRoot, p).replace(/\\/g, '/');
           if (rel.startsWith('./')) rel = rel.slice(2);
-          if (rel.startsWith('..') || rel.startsWith('/')) {
-            return path.basename(p).replace(/\\/g, '/');
-          }
+          if (rel.startsWith('..') || rel.startsWith('/')) return path.basename(p).replace(/\\/g, '/');
           return rel || '.';
         }
+
         function shouldIgnore(filePath) {
           const rel = normalize(filePath);
           if (!rel || rel === '.' || rel.startsWith('..') || rel.startsWith('/')) {
-            return rel.includes('node_modules') || rel.includes('.git');
+            return rel.includes('node_modules') || rel.includes('.git') || rel.includes('target/');
           }
           try {
-            return ig.ignores(rel) || rel.includes('node_modules') || rel.includes('.git');
-          } catch (e) {
+            return ig.ignores(rel) || rel.includes('node_modules') || rel.includes('.git') || rel.includes('target/');
+          } catch {
             return false;
           }
         }
+
         function countTokens(content) { return Math.ceil(content.length / 4); }
 
         function scanFile(filePath) {
@@ -120,7 +120,8 @@ function activate(context) {
         fs.writeFileSync(outputFile, xml);
 
         const outputUri = vscode.Uri.file(outputFile);
-        vscode.commands.executeCommand('revealFileInOS', outputUri);
+        vscode.window.showTextDocument(outputUri);
+        // vscode.commands.executeCommand('revealFileInOS', outputUri);
 
         vscode.window.showInformationMessage(`✅ Xong → ${path.basename(outputFile)} (${files.size} file, ${totalTokens.toLocaleString()} tokens)`);
       } catch (err) {
