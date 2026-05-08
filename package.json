@@ -24,12 +24,6 @@
       "explorer/context": [
         {
           "command": "hcpack.pack",
-          "when": "explorerResourceIsFolder",
-          "group": "navigation@40"
-        },
-        {
-          "command": "hcpack.pack",
-          "when": "explorerResourceIsFile",
           "group": "navigation@40"
         }
       ]

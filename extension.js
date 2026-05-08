@@ -14,11 +14,19 @@ function activate(context) {
       cancellable: false
     }, async () => {
       try {
-        const targetDir = uri.fsPath;
+        let targetDir = uri.fsPath;
+        if (fs.existsSync(targetDir) && fs.statSync(targetDir).isFile()) {
+          targetDir = path.dirname(targetDir);
+        }
+        
         const projectRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
         const folderName = path.basename(targetDir);
         const outputFile = path.join(projectRoot, `${folderName}.xml`);
-        const extensions = ['.ts', '.tsx', '.js', '.jsx', '.cs', '.vb', '.mjs', '.md', '.rs', '.toml', '.sql', '.yml', '.yaml', '.json', '.css', '.html'];
+        const extensions = [
+          '.ts', '.tsx', '.js', '.jsx', '.cs', '.vb', '.mjs', '.md', '.rs', 
+          '.toml', '.sql', '.yml', '.yaml', '.json', '.css', '.html', 
+          '.cshtml', '.csproj', '.razor', '.sln', '.config', '.props', '.targets'
+        ];
 
         const ig = ignore().add(fs.existsSync(path.join(projectRoot, '.gitignore')) ? fs.readFileSync(path.join(projectRoot, '.gitignore'), 'utf8') : '');
 
