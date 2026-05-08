@@ -14,13 +14,17 @@ function activate(context) {
       cancellable: false
     }, async () => {
       try {
-        let targetDir = uri.fsPath;
-        if (fs.existsSync(targetDir) && fs.statSync(targetDir).isFile()) {
-          targetDir = path.dirname(targetDir);
-        }
-        
+        const targetPath = uri.fsPath;
         const projectRoot = vscode.workspace.workspaceFolders[0].uri.fsPath;
-        const folderName = path.basename(targetDir);
+        
+        let isSingleFile = false;
+        let searchKeyword = '';
+        if (fs.existsSync(targetPath) && fs.statSync(targetPath).isFile()) {
+          isSingleFile = true;
+          searchKeyword = path.parse(targetPath).name;
+        }
+
+        const folderName = isSingleFile ? searchKeyword : path.basename(targetPath);
         const outputFile = path.join(projectRoot, `${folderName}.xml`);
         const extensions = [
           '.ts', '.tsx', '.js', '.jsx', '.cs', '.vb', '.mjs', '.md', '.rs', 
@@ -43,11 +47,13 @@ function activate(context) {
 
         function shouldIgnore(filePath) {
           const rel = normalize(filePath);
-          if (!rel || rel === '.' || rel.startsWith('..') || rel.startsWith('/')) {
-            return rel.includes('node_modules') || rel.includes('.git') || rel.includes('target/');
+          const parts = rel.split('/');
+          if (parts.includes('node_modules') || parts.includes('.git') || parts.includes('target') || parts.includes('bin') || parts.includes('obj') || parts.includes('.vs')) {
+            return true;
           }
+          if (!rel || rel === '.' || rel.startsWith('..') || rel.startsWith('/')) return false;
           try {
-            return ig.ignores(rel) || rel.includes('node_modules') || rel.includes('.git') || rel.includes('target/');
+            return ig.ignores(rel);
           } catch {
             return false;
           }
@@ -92,20 +98,45 @@ function activate(context) {
           }
         }
 
-        walkDir(targetDir);
+        function walkDirAndSearch(dir, keyword) {
+          if (!fs.existsSync(dir) || shouldIgnore(dir)) return;
+          const stat = fs.statSync(dir);
+          if (stat.isDirectory()) {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+              const full = path.join(dir, entry.name);
+              if (entry.isDirectory()) walkDirAndSearch(full, keyword);
+              else if (extensions.some(ext => full.endsWith(ext))) {
+                if (full === targetPath) {
+                   scanFile(full);
+                } else {
+                   const content = fs.readFileSync(full, 'utf8');
+                   if (content.includes(keyword)) scanFile(full);
+                }
+              }
+            }
+          }
+        }
 
-        const manual = ['src/components/DynamicTable', 'src/libs/protable-excel', 'src/hooks', 'src/utils/irp.utils.ts', 'src/pages/IRPE/shared', 'docs'];
-        manual.forEach(p => {
-          const abs = path.resolve(projectRoot, p);
-          if (!fs.existsSync(abs)) return;
-          if (fs.statSync(abs).isDirectory()) walkDir(abs); else scanFile(abs);
-        });
+        if (isSingleFile) {
+          walkDirAndSearch(projectRoot, searchKeyword);
+          scanFile(targetPath);
+        } else {
+          walkDir(targetPath);
 
-        const docsDir = path.resolve(projectRoot, 'docs');
-        if (fs.existsSync(docsDir)) {
-          fs.readdirSync(docsDir).forEach(file => {
-            if (file.match(/^IRP.*\.md$/i)) scanFile(path.join(docsDir, file));
+          const manual = ['src/components/DynamicTable', 'src/libs/protable-excel', 'src/hooks', 'src/utils/irp.utils.ts', 'src/pages/IRPE/shared', 'docs'];
+          manual.forEach(p => {
+            const abs = path.resolve(projectRoot, p);
+            if (!fs.existsSync(abs)) return;
+            if (fs.statSync(abs).isDirectory()) walkDir(abs); else scanFile(abs);
           });
+
+          const docsDir = path.resolve(projectRoot, 'docs');
+          if (fs.existsSync(docsDir)) {
+            fs.readdirSync(docsDir).forEach(file => {
+              if (file.match(/^IRP.*\.md$/i)) scanFile(path.join(docsDir, file));
+            });
+          }
         }
 
         if (files.size === 0) {
